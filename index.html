@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <title>Scribery by Scribery</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Scribery</h1>
+        <h2>Open-Source User Session Recording</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/Scribery" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <p>The Scribery project is an effort to design and implement an Open-Source
+solution for recording user sessions on Linux systems.</p>
+
+<p>Many companies need to have their systems used, or even managed by people they
+don’t entirely trust: contractors, outsourced support, peripheral IT staff,
+etc. It helps to know what these users or operators were doing on your
+systems, or even what they’re doing right now, so you can not only prevent
+repeated issues, but also stop an incident about to happen.</p>
+
+<p>Government, medical and certain other organizations can be required by law to
+collect recordings of user sessions. Financial organizations require tight
+tracking of what's happening on their systems. Support desks also appreciate a
+way to look back at what exactly led to an issue, so they don’t need to talk
+through a user’s recollection of events.</p>
+
+<p>We're working on supporting recording of text terminal sessions (e.g. login at
+the console, via SSH, or telnet). The recorded data includes what user enters
+into the terminal and sees on the screen, what commands the user executes,
+what files he/she accesses and how, and other data relevant to the session.</p>
+
+<p>To support centralized architecture and to take the recording away from the
+user system where it cannot be kept safely, we stream it via the conventional
+logging system to a central storage. Then, the auditors, or support, can
+search, correlate, and playback the recordings from that central location.</p>
+
+<p>The solution is being integrated with a central identity and policy management
+system, so that administrators could specify which users to record where
+centrally.</p>
+
+<h2>
+<a id="components" class="anchor" href="#components" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Components</h2>
+
+<h3>
+<a id="client-side" class="anchor" href="#client-side" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Client side</h3>
+
+<p><strong>Tlog-rec</strong></p>
+
+<blockquote>
+<p>A terminal I/O recording shim, which is put between the terminal and the
+user shell. A part of <a href="http://scribery.github.io/tlog/">tlog</a>.</p>
+</blockquote>
+
+<p><strong><a href="https://fedorahosted.org/sssd/">SSSD</a></strong></p>
+
+<blockquote>
+<p>A system daemon responsible for telling the system when and how to start
+session recording, possibly on behalf of a central identity and policy
+management system. Optional.</p>
+</blockquote>
+
+<p><strong><a href="https://people.redhat.com/sgrubb/audit/">Auditd</a></strong></p>
+
+<blockquote>
+<p>A general auditing system, which records additional session activity such as
+commands executed and files accessed. Optional.</p>
+</blockquote>
+
+<p><strong><a href="http://www.rsyslog.com/">Rsyslogd</a></strong></p>
+
+<blockquote>
+<p>A logging server, which collects both the recorded terminal I/O, and audit
+messages, then massages and sends them to the central storage.</p>
+</blockquote>
+
+<h3>
+<a id="server-side" class="anchor" href="#server-side" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Server side</h3>
+
+<p><strong><a href="http://www.freeipa.org/">FreeIPA</a></strong></p>
+
+<blockquote>
+<p>A central identity and policy management solution responsible for
+controlling what is going to be recorded, for which users/groups, and on
+which hosts. Optional.</p>
+</blockquote>
+
+<p><strong><a href="https://www.elastic.co/products/elasticsearch">ElasticSearch</a></strong></p>
+
+<blockquote>
+<p>The central storage for the recordings. Can also serve as the storage of
+logs in general. Can be used for searching and correlation with the help of
+visualization solutions such as <a href="https://www.elastic.co/products/kibana">Kibana</a>.</p>
+</blockquote>
+
+<p><strong>Tlog-play</strong></p>
+
+<blockquote>
+<p>A basic command-line session playback tool. Can be used to test the setup
+and quickly playback sessions from the command line. A part of <a href="http://scribery.github.io/tlog/">tlog</a>.
+Optional.</p>
+</blockquote>
+
+<p><strong>Web UI</strong></p>
+
+<blockquote>
+<p>A session playback web UI component, which can join the terminal I/O and
+audit data for searching and correlation within specific sessions. To be
+implemented.</p>
+</blockquote>
+
+<h2>
+<a id="control-and-data-flow" class="anchor" href="#control-and-data-flow" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Control and data flow</h2>
+
+<pre><code>       Servers            Network               Clients
+ _____________________               ______________________________
+|  _________________  |             |  ___________________         |
+| |                 | |             | |                   |        |
+| |     FreeIPA     |====(control)===&gt;|       SSSD        |        |
+| |_________________| |             | |___________________|        |
+|         /\          |             |     ||          /\           |
+|         ||          |             |     ||          ||           |
+|      (control)      |             |  (control)   (control)       |
+|   ......||.......   |             |     ||  ........||.........  |
+|  :               :  |             |     || :                   : |
+|  : Administrator :  |             |     || :   Administrator   : |
+|  :               :  |             |     || :                   : |
+|   :::::::::::::::   |             |     ||  '''||'''''''''||'''  |
+|  :               :  |             |     ||     ||         ||     |
+|  :    Auditor    :  |             |     ||     ||         ||     |
+|  :               :  |             |     ||     ||         ||     |
+|   ''/\'''''''/\''   |             |     ||  (control)  (control) |
+|     ||       ||     |             |     ||     ||         ||     |
+|   (data)   (data)   |             |     ||     ||         ||     |
+|  ___||__   __||___  |             |     ||     ||         ||     |
+| |       | |       | |             |  ___\/_____\/___   ___\/___  |
+| | Tlog- | | WebUI | |             | |               | |        | |
+| | play  | | (TBD) | |             | |   Tlog-rec    | | Auditd | |
+| |_______| |_______| |             | |_______________| |________| |
+|     /\       /\     |             |        ||             ||     |
+|     ||       ||     |             |      (data)         (data)   |
+|   (data)   (data)   |             |        ||             ||     |
+|  ___||_______||___  |             |     ___\/_____________\/___  |
+| |                 | |             |    |                       | |
+| |  ElasticSearch  |&lt;====(data)=========|       Rsyslogd        | |
+| |_________________| |             |    |_______________________| |
+|_____________________|             |______________________________|
+</code></pre>
+
+<h2>
+<a id="status-and-plans" class="anchor" href="#status-and-plans" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Status and plans</h2>
+
+<p>At the moment the base terminal I/O recording and playback is implemented in
+tlog, its <a href="https://github.com/Scribery/tlog/releases">packages</a> are available on GitHub and in the
+upcoming Fedora 24.</p>
+
+<p>Right now we're working on integrating tlog with SSSD and FreeIPA, making
+Auditd stream messages to ElasticSearch and are starting implementing the web
+UI playback component.</p>
+
+<h2>
+<a id="contacts" class="anchor" href="#contacts" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Contacts</h2>
+
+<p>Please contact <a href="mailto:spbnick@gmail.com">Nikolai Kondrashov</a> if you have any
+questions or suggestions.</p>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
