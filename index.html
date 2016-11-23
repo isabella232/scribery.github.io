@@ -66,7 +66,8 @@ centrally.</p>
 
 <blockquote>
 <p>A terminal I/O recording shim, which is put between the terminal and the
-user shell. A part of <a href="http://scribery.github.io/tlog/">tlog</a>.</p>
+user shell. Sends the recording to the logging server as JSON. A part of
+<a href="http://scribery.github.io/tlog/">tlog</a>.</p>
 </blockquote>
 
 <p><strong><a href="https://fedorahosted.org/sssd/">SSSD</a></strong></p>
@@ -84,10 +85,21 @@ management system. Optional.</p>
 commands executed and files accessed. Optional.</p>
 </blockquote>
 
-<p><strong><a href="http://www.rsyslog.com/">Rsyslogd</a></strong></p>
+<p><strong><a href="http://scribery.github.io/aushape/">Aushape</a></strong></p>
 
 <blockquote>
-<p>A logging server, which collects both the recorded terminal I/O, and audit
+<p>An audit log converter running under Auditd to convert audit events to JSON
+on the fly, to be passed to the logging server. Optional.</p>
+</blockquote>
+
+<p><strong>Logging server</strong></p>
+
+<blockquote>
+<p>
+<a href="http://www.rsyslog.com/">Rsyslogd</a>,
+<a href="http://www.fluentd.org/">Fluentd</a>, or
+<a href="https://www.elastic.co/products/logstash">Logstash</a>
+- a logging server, which collects both the recorded terminal I/O, and audit
 messages, then massages and sends them to the central storage.</p>
 </blockquote>
 
@@ -130,38 +142,40 @@ implemented.</p>
 <a id="control-and-data-flow" class="anchor" href="#control-and-data-flow" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Control and data flow</h2>
 
 <pre><code>       Servers            Network               Clients
- _____________________               ______________________________
-|  _________________  |             |  ___________________         |
-| |                 | |             | |                   |        |
-| |     FreeIPA     |====(control)===&gt;|       SSSD        |        |
-| |_________________| |             | |___________________|        |
-|         /\          |             |     ||          /\           |
-|         ||          |             |     ||          ||           |
-|      (control)      |             |  (control)   (control)       |
-|   ......||.......   |             |     ||  ........||.........  |
-|  :               :  |             |     || :                   : |
-|  : Administrator :  |             |     || :   Administrator   : |
-|  :               :  |             |     || :                   : |
-|   :::::::::::::::   |             |     ||  '''||'''''''''||'''  |
-|  :               :  |             |     ||     ||         ||     |
-|  :    Auditor    :  |             |     ||     ||         ||     |
-|  :               :  |             |     ||     ||         ||     |
-|   ''/\'''''''/\''   |             |     ||  (control)  (control) |
-|     ||       ||     |             |     ||     ||         ||     |
-|   (data)   (data)   |             |     ||     ||         ||     |
-|  ___||__   __||___  |             |     ||     ||         ||     |
-| |       | |       | |             |  ___\/_____\/___   ___\/___  |
-| | Tlog- | | WebUI | |             | |               | |        | |
-| | play  | | (TBD) | |             | |   Tlog-rec    | | Auditd | |
-| |_______| |_______| |             | |_______________| |________| |
-|     /\       /\     |             |        ||             ||     |
-|     ||       ||     |             |      (data)         (data)   |
-|   (data)   (data)   |             |        ||             ||     |
-|  ___||_______||___  |             |     ___\/_____________\/___  |
-| |                 | |             |    |                       | |
-| |  ElasticSearch  |&lt;====(data)=========|       Rsyslogd        | |
-| |_________________| |             |    |_______________________| |
-|_____________________|             |______________________________|
+ _____________________               _______________________________
+|  _________________  |             |  ___________________          |
+| |                 | |             | |                   |         |
+| |     FreeIPA     |====(control)===&gt;|       SSSD        |         |
+| |_________________| |             | |___________________|         |
+|         /\          |             |     ||          /\            |
+|         ||          |             |     ||          ||            |
+|      (control)      |             |  (control)   (control)        |
+|   ......||.......   |             |     ||  ........||.........   |
+|  : Administrator :  |             |     || :   Administrator   :  |
+|   '''''''''''''''   |             |     ||  '''||'''''''''||'''   |
+|                     |             |     ||  (control)  (control)  |
+|   ...............   |             |     ||     ||         ||      |
+|  :    Auditor    :  |             |  ___\/_____\/__   ____\/____  |
+|   ''/\'''''''/\''   |             | |              | |          | |
+|     ||       ||     |             | |   Tlog-rec   | |  Auditd  | |
+|   (data)   (data)   |             | |______________| |__________| |
+|  ___||__   __||___  |             |        ||             ||      |
+| |       | |       | |             |        ||          ___\/____  |
+| | Tlog- | | WebUI | |             |        ||         |         | |
+| | play  | | (TBD) | |             |        ||         | Aushape | |
+| |_______| |_______| |             |        ||         |_________| |
+|     /\       /\     |             |        ||             ||      |
+|     ||       ||     |             |      (data)         (data)    |
+|   (data)   (data)   |             |        ||             ||      |
+|  ___||_______||___  |             |     ___\/_____________\/___   |
+| |                 | |             |    |                       |  |
+| |                 | |             |    |        Rsyslog        |  |
+| |                 | |             |    | - - - - - - - - - - - |  |
+| |  Elasticsearch  |&lt;====(data)=========|        Fluentd        |  |
+| |                 | |             |    | - - - - - - - - - - - |  |
+| |                 | |             |    |        Logstash       |  |
+| |_________________| |             |    |_______________________|  |
+|_____________________|             |_______________________________|
 </code></pre>
 
 <p>See also the project's <a href="http://www.freeipa.org/page/Session_Recording">WIP design page</a>
